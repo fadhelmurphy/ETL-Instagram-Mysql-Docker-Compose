@@ -8,7 +8,7 @@ services:
     environment:
       - INSTAGRAM_USERNAME=your_instagram_username
       - INSTAGRAM_PASSWORD=your_instagram_password
-      - TARGET_POST_URL=CuHZQo8h9RT  # Ganti dengan URL postingan yang ingin di-scrape
+      - TARGET_POST_URL=CuHZQo8h9RT  # Ganti dengan id postingan yang ingin di-scrape
       - MYSQL_USER=padel_user
       - MYSQL_PASSWORD=padel_password
       - MYSQL_HOST=db
@@ -45,3 +45,25 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - phpmyadmin
+  
+  airflow-webserver:
+    image: apache/airflow:latest
+    # restart: always
+    command: >
+      bash -c "airflow webserver"
+    environment:
+      - _AIRFLOW_DB_MIGRATE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin  # Ganti dengan username yang diinginkan
+      - _AIRFLOW_WWW_USER_PASSWORD=admin  # Ganti dengan password yang diinginkan
+      - LOAD_EX=n
+      - EXECUTOR=Local
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      - db
+      - scraper

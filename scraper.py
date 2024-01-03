@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import instaloader
 from scipy.stats import shapiro
+import numpy as np
 # from dotenv import load_dotenv
 
 # load_dotenv()
@@ -53,17 +54,22 @@ def data_cleaning(comment_list):
     columns_to_drop = missing_values_proportion[missing_values_proportion < 0.1].index
     df.dropna(subset=columns_to_drop, inplace=True)
     
-    # Isi missing values dengan nilai rata-rata atau median, tergantung pada distribusi data
-    for column in df.columns:
-        if df[column].isnull().sum() > 0:  # Periksa kolom dengan missing values
-            is_normal = check_normality(df[column])
-            if is_normal:
-                mean_value = df[column].mean()
-                df[column].fillna(mean_value, inplace=True)
-            else:
-                median_value = df[column].median()
-                df[column].fillna(median_value, inplace=True)
-    
+    # Kolom-kolom numerik: Mengisi nilai null dengan mean jika terdistribusi normal, dan median jika tidak
+    numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+    for col in numeric_cols:
+        if df[col].isnull().sum() > 0:
+            if df[col].dtype != 'object':
+                if df[col].skew() > 1 or df[col].skew() < -1:  # Jika distribusi tidak normal (skewness > 1 atau < -1)
+                    df[col] = df[col].fillna(df[col].median())
+                else:  # Jika terdistribusi normal
+                    df[col] = df[col].fillna(df[col].mean())
+
+    # Kolom-kolom kategorikal: Mengisi nilai null dengan mode
+    categorical_cols = df.select_dtypes(include='object').columns.tolist()
+    for col in categorical_cols:
+        if df[col].isnull().sum() > 0:
+            df[col] = df[col].fillna(df[col].mode()[0])
+
     return df
 
 def check_normality(column):
